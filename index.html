@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Панель управления</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111;
+      margin-bottom: 4px;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+
+    .card-label {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    .power-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .power-state {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111;
+    }
+
+    button {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      padding: 8px 20px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      color: #111;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #f0f0f0;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: #fff;
+    }
+
+    .commands {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cmd-btn {
+      text-align: left;
+      width: 100%;
+    }
+
+    .status-bar {
+      background: #f0f0f0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #aaa;
+      flex-shrink: 0;
+    }
+
+    .status-label {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .status-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111;
+      flex: 1;
+    }
+
+    .status-time {
+      font-size: 12px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wrapper">
+
+    <h1>Панель управления</h1>
+
+    <!-- Питание -->
+    <div class="card">
+      <div class="card-label">Питание</div>
+      <div class="power-row">
+        <span class="power-state" id="stateLabel">Выключено</span>
+        <button id="powerBtn" onclick="togglePower()">ВКЛ</button>
+      </div>
+    </div>
+
+    <!-- Команды -->
+    <div class="card">
+      <div class="card-label">Команды</div>
+      <div class="commands">
+        <button class="cmd-btn" onclick="runCmd(1)" disabled>Команда 1</button>
+        <button class="cmd-btn" onclick="runCmd(2)" disabled>Команда 2</button>
+        <button class="cmd-btn" onclick="runCmd(3)" disabled>Команда 3</button>
+      </div>
+    </div>
+
+    <!-- Статус -->
+    <div class="status-bar">
+      <span class="dot" id="dot"></span>
+      <span class="status-label">Статус:</span>
+      <span class="status-text" id="statusMsg">ожидание</span>
+      <span class="status-time" id="statusTime">--:--:--</span>
+    </div>
+
+  </div>
+
+  <script>
+    var on = false;
+    var cmdBtns = document.querySelectorAll('.cmd-btn');
+
+    function now() {
+      var d = new Date();
+      return [d.getHours(), d.getMinutes(), d.getSeconds()]
+        .map(function(n) { return String(n).padStart(2, '0'); })
+        .join(':');
+    }
+
+    function setStatus(msg, color) {
+      document.getElementById('statusMsg').textContent = msg;
+      document.getElementById('dot').style.background = color;
+      document.getElementById('statusTime').textContent = now();
+    }
+
+    function togglePower() {
+      on = !on;
+      document.getElementById('powerBtn').textContent = on ? 'ВЫКЛ' : 'ВКЛ';
+      document.getElementById('stateLabel').textContent = on ? 'Включено' : 'Выключено';
+      cmdBtns.forEach(function(b) { b.disabled = !on; });
+      if (on) {
+        setStatus('система включена', '#4caf50');
+      } else {
+        setStatus('система выключена', '#aaa');
+      }
+    }
+
+    function runCmd(n) {
+      if (!on) return;
+      setStatus('выполняется команда ' + n + '...', '#ff9800');
+      setTimeout(function() {
+        setStatus('команда ' + n + ' выполнена', '#4caf50');
+      }, 600);
+    }
+  </script>
+
+</body>
+</html>
