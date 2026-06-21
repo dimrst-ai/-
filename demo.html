@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Захват — демоверсия</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 0 16px; color: #222; }
+  h1 { font-size: 22px; }
+  h2 { font-size: 16px; margin-top: 24px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  .note { background: #fff7d6; border: 1px solid #e0c040; padding: 10px 12px; border-radius: 6px; font-size: 14px; }
+  button { font-size: 15px; padding: 8px 16px; margin: 4px 4px 4px 0; border: 1px solid #888; border-radius: 6px; background: #f0f0f0; cursor: pointer; }
+  button:hover { background: #e2e2e2; }
+  #slider { width: 100%; }
+  .status { border: 1px solid #ccc; border-radius: 6px; padding: 12px; background: #fafafa; }
+  .status p { margin: 6px 0; }
+  .bar { height: 18px; background: #ddd; border-radius: 9px; overflow: hidden; margin-top: 8px; }
+  .bar > div { height: 100%; background: #4a90d9; width: 100%; transition: width 0.3s; }
+  .view { text-align: center; }
+  svg { background: #fff; border: 1px solid #ccc; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<h1>Трёхпалый самоцентрирующийся захват</h1>
+
+<p class="note">
+  <b>Это демоверсия.</b> Она работает без сервера — состояние эмулируется прямо в браузере,
+  чтобы показать, как выглядит панель. В рабочей версии команды идут на сервер (Flask / ESP32),
+  и состояние хранится там.
+</p>
+
+<h2>Вид сверху</h2>
+<div class="view">
+  <!-- Схема захвата: вид сверху, три губки под 120 градусов сходятся к центру -->
+  <svg id="grip" width="280" height="280" viewBox="0 0 280 280">
+    <!-- корпус -->
+    <circle cx="140" cy="140" r="40" fill="#bbb" stroke="#888" stroke-width="2"/>
+    <!-- ведущая шестерня в центре -->
+    <circle cx="140" cy="140" r="16" fill="#777" stroke="#555" stroke-width="2"/>
+    <!-- объект между губками -->
+    <circle id="object" cx="140" cy="140" r="22" fill="#4a90d9" stroke="#2c6cb0" stroke-width="2"/>
+    <!-- три губки (создаются скриптом) -->
+    <g id="jaws"></g>
+  </svg>
+</div>
+
+<h2>Команды</h2>
+<button onclick="grip()">Сжать</button>
+<button onclick="release()">Разжать</button>
+<button onclick="stop()">Стоп</button>
+
+<h2>Раскрытие (%)</h2>
+<input type="range" id="slider" min="0" max="100" value="100">
+<span id="sliderVal">100</span>%
+<br>
+<button onclick="applySlider()">Применить</button>
+
+<h2>Статус</h2>
+<div class="status">
+  <p>Раскрытие: <b id="percent">100</b> %</p>
+  <p>Зазор между губками: <b id="gap">80</b> мм</p>
+  <p>Состояние: <b id="status">open</b></p>
+  <p>Двигатель крутится: <b id="moving">нет</b></p>
+  <div class="bar"><div id="barFill"></div></div>
+</div>
+
+<script>
+var MIN_MM = 10, MAX_MM = 80;
+var state = { percent: 100, gap_mm: 80, moving: false, status: "open" };
+
+var cx = 140, cy = 140;          // центр
+var rMin = 30, rMax = 95;        // насколько далеко губка от центра (сжато / раскрыто)
+
+// Создаём три губки под углами 90, 210, 330 градусов
+function buildJaws() {
+  var g = document.getElementById('jaws');
+  var angles = [90, 210, 330];
+  for (var i = 0; i < 3; i++) {
+    var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', 26);
+    rect.setAttribute('height', 40);
+    rect.setAttribute('rx', 4);
+    rect.setAttribute('fill', '#555');
+    rect.setAttribute('data-angle', angles[i]);
+    g.appendChild(rect);
+  }
+}
+
+function drawJaws() {
+  var jaws = document.getElementById('jaws').children;
+  // чем больше percent, тем дальше губки от центра
+  var r = rMin + (rMax - rMin) * state.percent / 100;
+  for (var i = 0; i < jaws.length; i++) {
+    var a = jaws[i].getAttribute('data-angle') * Math.PI / 180;
+    var x = cx + r * Math.cos(a);
+    var y = cy - r * Math.sin(a);
+    jaws[i].setAttribute('x', x - 13);
+    jaws[i].setAttribute('y', y - 20);
+    jaws[i].setAttribute('transform', 'rotate(' + (-jaws[i].getAttribute('data-angle') + 90) + ' ' + x + ' ' + y + ')');
+  }
+  // объект в центре: больше, когда губки разведены
+  var objR = 10 + 18 * state.percent / 100;
+  document.getElementById('object').setAttribute('r', objR);
+}
+
+function percentToMm(p) { return Math.round((MIN_MM + (MAX_MM - MIN_MM) * p / 100) * 10) / 10; }
+
+function applyPercent(p) {
+  p = Math.max(0, Math.min(100, Math.round(p)));
+  state.percent = p;
+  state.gap_mm = percentToMm(p);
+  state.moving = false;
+  if (p <= 0) state.status = "closed";
+  else if (p >= 100) state.status = "open";
+  else state.status = "partial";
+  show();
+}
+
+function grip()    { applyPercent(0); }
+function release() { applyPercent(100); }
+function stop()    { state.moving = false; show(); }
+function applySlider() { applyPercent(document.getElementById('slider').value); }
+
+document.getElementById('slider').addEventListener('input', function () {
+  document.getElementById('sliderVal').textContent = this.value;
+});
+
+function show() {
+  document.getElementById('percent').textContent = state.percent;
+  document.getElementById('gap').textContent = state.gap_mm;
+  document.getElementById('status').textContent = state.status;
+  document.getElementById('moving').textContent = state.moving ? 'да' : 'нет';
+  document.getElementById('barFill').style.width = state.percent + '%';
+  document.getElementById('slider').value = state.percent;
+  document.getElementById('sliderVal').textContent = state.percent;
+  drawJaws();
+}
+
+buildJaws();
+show();
+</script>
+
+</body>
+</html>

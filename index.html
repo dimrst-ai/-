@@ -1,201 +1,114 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Панель управления</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f5f5f5;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
-    }
-
-    .wrapper {
-      width: 100%;
-      max-width: 420px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    h1 {
-      font-size: 20px;
-      font-weight: 600;
-      color: #111;
-      margin-bottom: 4px;
-    }
-
-    .card {
-      background: #ffffff;
-      border: 1px solid #e0e0e0;
-      border-radius: 10px;
-      padding: 16px 20px;
-    }
-
-    .card-label {
-      font-size: 13px;
-      color: #888;
-      margin-bottom: 8px;
-    }
-
-    .power-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .power-state {
-      font-size: 16px;
-      font-weight: 600;
-      color: #111;
-    }
-
-    button {
-      font-family: Arial, sans-serif;
-      font-size: 14px;
-      padding: 8px 20px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background: #fff;
-      color: #111;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #f0f0f0;
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      background: #fff;
-    }
-
-    .commands {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .cmd-btn {
-      text-align: left;
-      width: 100%;
-    }
-
-    .status-bar {
-      background: #f0f0f0;
-      border-radius: 8px;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #aaa;
-      flex-shrink: 0;
-    }
-
-    .status-label {
-      font-size: 13px;
-      color: #888;
-    }
-
-    .status-text {
-      font-size: 13px;
-      font-weight: 600;
-      color: #111;
-      flex: 1;
-    }
-
-    .status-time {
-      font-size: 12px;
-      color: #aaa;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Управление захватом</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 0 16px; color: #222; }
+  h1 { font-size: 22px; }
+  h2 { font-size: 16px; margin-top: 24px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  button { font-size: 15px; padding: 8px 16px; margin: 4px 4px 4px 0; border: 1px solid #888; border-radius: 6px; background: #f0f0f0; cursor: pointer; }
+  button:hover { background: #e2e2e2; }
+  #slider { width: 100%; }
+  .status { border: 1px solid #ccc; border-radius: 6px; padding: 12px; background: #fafafa; }
+  .status p { margin: 6px 0; }
+  .bar { height: 18px; background: #ddd; border-radius: 9px; overflow: hidden; margin-top: 8px; }
+  .bar > div { height: 100%; background: #4a90d9; width: 100%; transition: width 0.3s; }
+  .view { text-align: center; }
+  svg { background: #fff; border: 1px solid #ccc; border-radius: 6px; }
+</style>
 </head>
 <body>
 
-  <div class="wrapper">
+<h1>Трёхпалый самоцентрирующийся захват</h1>
+<p>Управление через сервер. Состояние хранится на сервере.</p>
 
-    <h1>Панель управления</h1>
+<h2>Вид сверху</h2>
+<div class="view">
+  <svg id="grip" width="280" height="280" viewBox="0 0 280 280">
+    <circle cx="140" cy="140" r="40" fill="#bbb" stroke="#888" stroke-width="2"/>
+    <circle cx="140" cy="140" r="16" fill="#777" stroke="#555" stroke-width="2"/>
+    <circle id="object" cx="140" cy="140" r="22" fill="#4a90d9" stroke="#2c6cb0" stroke-width="2"/>
+    <g id="jaws"></g>
+  </svg>
+</div>
 
-    <!-- Питание -->
-    <div class="card">
-      <div class="card-label">Питание</div>
-      <div class="power-row">
-        <span class="power-state" id="stateLabel">Выключено</span>
-        <button id="powerBtn" onclick="togglePower()">ВКЛ</button>
-      </div>
-    </div>
+<h2>Команды</h2>
+<button onclick="cmd('/grip')">Сжать</button>
+<button onclick="cmd('/release')">Разжать</button>
+<button onclick="cmd('/stop')">Стоп</button>
 
-    <!-- Команды -->
-    <div class="card">
-      <div class="card-label">Команды</div>
-      <div class="commands">
-        <button class="cmd-btn" onclick="runCmd(1)" disabled>Команда 1</button>
-        <button class="cmd-btn" onclick="runCmd(2)" disabled>Команда 2</button>
-        <button class="cmd-btn" onclick="runCmd(3)" disabled>Команда 3</button>
-      </div>
-    </div>
+<h2>Раскрытие (%)</h2>
+<input type="range" id="slider" min="0" max="100" value="100" onchange="setPercent(this.value)">
+<span id="sliderVal">100</span>%
+<br>
+<button onclick="setPercent(document.getElementById('slider').value)">Применить</button>
 
-    <!-- Статус -->
-    <div class="status-bar">
-      <span class="dot" id="dot"></span>
-      <span class="status-label">Статус:</span>
-      <span class="status-text" id="statusMsg">ожидание</span>
-      <span class="status-time" id="statusTime">--:--:--</span>
-    </div>
+<h2>Статус</h2>
+<div class="status">
+  <p>Раскрытие: <b id="percent">—</b> %</p>
+  <p>Зазор между губками: <b id="gap">—</b> мм</p>
+  <p>Состояние: <b id="status">—</b></p>
+  <p>Двигатель крутится: <b id="moving">—</b></p>
+  <div class="bar"><div id="barFill"></div></div>
+</div>
 
-  </div>
+<script>
+var cx = 140, cy = 140;
+var rMin = 30, rMax = 95;
 
-  <script>
-    var on = false;
-    var cmdBtns = document.querySelectorAll('.cmd-btn');
+function buildJaws() {
+  var g = document.getElementById('jaws');
+  var angles = [90, 210, 330];
+  for (var i = 0; i < 3; i++) {
+    var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', 26);
+    rect.setAttribute('height', 40);
+    rect.setAttribute('rx', 4);
+    rect.setAttribute('fill', '#555');
+    rect.setAttribute('data-angle', angles[i]);
+    g.appendChild(rect);
+  }
+}
 
-    function now() {
-      var d = new Date();
-      return [d.getHours(), d.getMinutes(), d.getSeconds()]
-        .map(function(n) { return String(n).padStart(2, '0'); })
-        .join(':');
-    }
+function drawJaws(percent) {
+  var jaws = document.getElementById('jaws').children;
+  var r = rMin + (rMax - rMin) * percent / 100;
+  for (var i = 0; i < jaws.length; i++) {
+    var a = jaws[i].getAttribute('data-angle') * Math.PI / 180;
+    var x = cx + r * Math.cos(a);
+    var y = cy - r * Math.sin(a);
+    jaws[i].setAttribute('x', x - 13);
+    jaws[i].setAttribute('y', y - 20);
+    jaws[i].setAttribute('transform', 'rotate(' + (-jaws[i].getAttribute('data-angle') + 90) + ' ' + x + ' ' + y + ')');
+  }
+  var objR = 10 + 18 * percent / 100;
+  document.getElementById('object').setAttribute('r', objR);
+}
 
-    function setStatus(msg, color) {
-      document.getElementById('statusMsg').textContent = msg;
-      document.getElementById('dot').style.background = color;
-      document.getElementById('statusTime').textContent = now();
-    }
+document.getElementById('slider').addEventListener('input', function () {
+  document.getElementById('sliderVal').textContent = this.value;
+});
 
-    function togglePower() {
-      on = !on;
-      document.getElementById('powerBtn').textContent = on ? 'ВЫКЛ' : 'ВКЛ';
-      document.getElementById('stateLabel').textContent = on ? 'Включено' : 'Выключено';
-      cmdBtns.forEach(function(b) { b.disabled = !on; });
-      if (on) {
-        setStatus('система включена', '#4caf50');
-      } else {
-        setStatus('система выключена', '#aaa');
-      }
-    }
+function cmd(url) { fetch(url).then(r => r.json()).then(show); }
+function setPercent(p) { fetch('/set?percent=' + p).then(r => r.json()).then(show); }
 
-    function runCmd(n) {
-      if (!on) return;
-      setStatus('выполняется команда ' + n + '...', '#ff9800');
-      setTimeout(function() {
-        setStatus('команда ' + n + ' выполнена', '#4caf50');
-      }, 600);
-    }
-  </script>
+function show(s) {
+  document.getElementById('percent').textContent = s.percent;
+  document.getElementById('gap').textContent = s.gap_mm;
+  document.getElementById('status').textContent = s.status;
+  document.getElementById('moving').textContent = s.moving ? 'да' : 'нет';
+  document.getElementById('barFill').style.width = s.percent + '%';
+  drawJaws(s.percent);
+}
+
+function poll() { fetch('/status').then(r => r.json()).then(show); }
+
+buildJaws();
+setInterval(poll, 1000);
+poll();
+</script>
 
 </body>
 </html>
